@@ -21,7 +21,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let extract_dir = Path::new(cbz_path).parent().unwrap();
     fs::create_dir_all(extract_dir)?;
 
-    // Extract all files from the archive
+    // Extract all files from the archive and track image paths
+    let mut extracted_image_paths = Vec::new();
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
         let outpath = match file.enclosed_name() {
@@ -39,6 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             let mut outfile = File::create(&outpath)?;
             std::io::copy(&mut file, &mut outfile)?;
+            extracted_image_paths.push(outpath);
         }
     }
 
@@ -48,9 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(&resized_dir)?;
 
     // Iterate through extracted files and resize images
-    for entry in fs::read_dir(extract_dir)? {
-        let entry = entry?;
-        let path = entry.path();
+    for path in extracted_image_paths {
         if path.is_file() {
             // Check if the file is an image
             if let Ok(img) = image::open(&path) {
@@ -73,6 +73,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let filename = path.file_name().unwrap();
                 let output_path = resized_dir.join(filename);
                 resized_img.save(&output_path)?;
+
+                // Delete the original extracted image
+                fs::remove_file(&path)?;
             }
         }
     }
