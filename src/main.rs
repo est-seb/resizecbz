@@ -1,7 +1,7 @@
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use zip::ZipArchive;
-use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
+use image::{DynamicImage, GenericImageView};
 use image::imageops::resize;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -42,6 +42,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    // Create a new directory for resized images
+    let cbz_stem = Path::new(cbz_path).file_stem().unwrap();
+    let resized_dir = extract_dir.join(format!("{}_resized", cbz_stem.to_string_lossy()));
+    fs::create_dir_all(&resized_dir)?;
+
     // Iterate through extracted files and resize images
     for entry in fs::read_dir(extract_dir)? {
         let entry = entry?;
@@ -64,17 +69,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Resize the image
                 let resized_img = resize(&img, new_width, new_height, image::imageops::FilterType::Lanczos3);
 
-                // Save the resized image
-                let mut output_path = path.clone();
-                let new_filename = format!(
-                    "{}_{}x{}.{}",
-                    output_path.file_stem().unwrap().to_string_lossy(),
-                    new_width,
-                    new_height,
-                    output_path.extension().unwrap().to_string_lossy()
-                );
-                output_path.set_file_name(new_filename);
-                resized_img.save(output_path)?;
+                // Save the resized image to the new directory
+                let filename = path.file_name().unwrap();
+                let output_path = resized_dir.join(filename);
+                resized_img.save(&output_path)?;
             }
         }
     }
