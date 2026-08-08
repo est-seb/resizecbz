@@ -3,7 +3,6 @@ use std::path::Path;
 use zip::ZipArchive;
 use image::GenericImageView;
 use image::imageops::resize;
-use std::io::Write;
 use zip::write::FileOptions;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
