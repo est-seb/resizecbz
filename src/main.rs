@@ -1,8 +1,10 @@
 use std::fs::{self, File};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use zip::ZipArchive;
-use image::{DynamicImage, GenericImageView};
+use image::GenericImageView;
 use image::imageops::resize;
+use std::io::Write;
+use zip::write::FileOptions;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get the .cbz file path from command-line arguments
@@ -79,6 +81,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
+
+    // Create a ZIP file containing all resized images
+    let zip_path = extract_dir.join(format!("{}_resized.zip", cbz_stem.to_string_lossy()));
+    let zip_file = File::create(&zip_path)?;
+    let mut zip = zip::ZipWriter::new(zip_file);
+
+    // Add all resized images to the ZIP file
+    for entry in fs::read_dir(&resized_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            let filename = path.file_name().unwrap().to_string_lossy();
+            let mut file = File::open(&path)?;
+            let options = FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+            zip.start_file(filename.to_string(), options)?;
+            std::io::copy(&mut file, &mut zip)?;
+        }
+    }
+
+    // Finish writing the ZIP file
+    zip.finish()?;
 
     Ok(())
 }
